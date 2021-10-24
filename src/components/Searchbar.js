@@ -1,44 +1,40 @@
 import PropTypes from 'prop-types';
-import { Component } from 'react';
+import { useState } from 'react';
 
-export default class Searchbar extends Component {
-  state = {
-    searchImage: '',
+export default function Searchbar({ onSubmit }) {
+  const [searchImage, setSearchImage] = useState('');
+
+  const handlerChange = event => {
+    setSearchImage(event.target.value);
   };
 
-  handlerChange = event => {
-    this.setState({ searchImage: event.target.value });
-  };
-
-  onSubmit = event => {
+  const onSubmitForm = event => {
     event.preventDefault();
-    if (this.state.searchImage.trim() === '') {
+    if (searchImage.trim() === '') {
       alert('Please, enter some for search image ... ');
       return;
     }
-    this.props.onSubmit(this.state.searchImage);
-    this.setState({ searchImage: '' });
+    onSubmit(searchImage);
+    setSearchImage('');
   };
 
-  render() {
-    return (
-      <header className="Searchbar">
-        <form className="SearchForm" onSubmit={this.onSubmit}>
-          <button type="submit" className="SearchForm-button">
-            <span className="SearchForm-button-label">Search</span>
-          </button>
+  return (
+    <header className="Searchbar">
+      <form className="SearchForm" onSubmit={onSubmitForm}>
+        <button type="submit" className="SearchForm-button">
+          <span className="SearchForm-button-label">Search</span>
+        </button>
 
-          <input
-            className="SearchForm-input"
-            value={this.state.searchImage}
-            type="search"
-            placeholder="Search images and photos"
-            onChange={this.handlerChange}
-          />
-        </form>
-      </header>
-    );
-  }
+        <input
+          className="SearchForm-input"
+          value={searchImage}
+          type="search"
+          placeholder="Search images and photos"
+          onChange={handlerChange}
+        />
+      </form>
+    </header>
+  );
 }
 
 Searchbar.propTypes = {
