@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import imageSearchAPI from '../services/api';
 import ImageGalleryItem from './ImageGalleryItem';
 import Modal from './Modal';
@@ -8,119 +8,95 @@ import { Notification } from 'react-pnotify';
 
 const imagesearch = new imageSearchAPI();
 
-export default class ImageGallery extends Component {
-  state = {
-    searchResultArray: [],
-    searchElements: null,
-    status: 'init',
-    imageLargeURL: '',
-    errorMessage: '',
-  };
+export default function ImageGallery({ searchQuery }) {
+  const [searchResultArray, setSearchResultArray] = useState([]);
+  const [searchElements, setSearchElements] = useState(null);
+  const [status, setStatus] = useState('init');
+  const [imageLargeURL, setImageLargeURL] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevProps !== this.props) {
-      this.setState({ status: 'pending' });
-      imagesearch.resetPage();
-      imagesearch.searchQuery = this.props.searchQuery;
-      imagesearch.search().then(searchResultArray => {
-        if (searchResultArray.hits.length > 0) {
-          this.setState({
-            searchResultArray: searchResultArray.hits,
-            searchElements: searchResultArray.total,
-            status: 'success',
-          });
-        } else {
-          this.setState({
-            status: 'error',
-            errorMessage: 'No images found ...',
-          });
-        }
-      });
+  useEffect(() => {
+    if (searchQuery === '') {
+      return;
     }
-  }
-
-  handleImageClick = image => {
-    this.setState({
-      imageLargeURL: image,
-      status: 'showmodal',
+    setStatus('pending');
+    imagesearch.resetPage();
+    imagesearch.searchQuery = searchQuery;
+    imagesearch.search().then(searchResultArray => {
+      if (searchResultArray.hits.length > 0) {
+        setSearchResultArray(searchResultArray.hits);
+        setSearchElements(searchResultArray.total);
+        setStatus('success');
+      } else {
+        setStatus('error');
+        setErrorMessage('No images found ...');
+      }
     });
-  };
-  onModalClose = () => {
-    this.setState({
-      status: 'success',
-    });
+  }, [searchQuery]);
+
+  const handleImageClick = image => {
+    setImageLargeURL(image);
+    setStatus('showmodal');
   };
 
-  handleMoreButtonClick = event => {
+  const onModalClose = () => {
+    setStatus('success');
+  };
+
+  const handleMoreButtonClick = event => {
     imagesearch.page = 1;
     imagesearch
       .search()
       .then(searchResultArray => {
-        this.setState(prev => ({
-          searchResultArray: [
-            ...prev.searchResultArray,
-            ...searchResultArray.hits,
-          ],
-          status: 'success',
-        }));
+        setSearchResultArray(prev => [...prev, ...searchResultArray.hits]);
+        setStatus('success');
         Button();
       })
       .catch(error => {
-        this.setState({ status: 'error', errorMessage: error });
+        setStatus('error');
+        setErrorMessage(error);
       });
   };
 
-  render() {
-    const {
-      status,
-      searchResultArray,
-      searchElements,
-      imageLargeURL,
-      errorMessage,
-    } = this.state;
+  if (status === 'init') {
+    return <h1 className="title"></h1>;
+  }
 
-    if (status === 'init') {
-      return <h1 className="title"></h1>;
-    }
+  if (status === 'pending') {
+    return <SpinnerLoader />;
+  }
 
-    if (status === 'pending') {
-      return <SpinnerLoader />;
-    }
+  if (status === 'success') {
+    return (
+      <>
+        <ul className="ImageGallery">
+          {searchResultArray.map(element => (
+            <ImageGalleryItem
+              key={element.id}
+              item={element}
+              handleImageClick={handleImageClick}
+            />
+          ))}
+        </ul>
+        {searchElements > 12 && (
+          <button
+            className="Button"
+            type="button"
+            id="more"
+            onClick={handleMoreButtonClick}
+          >
+            load more
+          </button>
+        )}
+      </>
+    );
+  }
 
-    if (status === 'success') {
-      return (
-        <>
-          <ul className="ImageGallery">
-            {searchResultArray.map(element => (
-              <ImageGalleryItem
-                key={element.id}
-                item={element}
-                handleImageClick={this.handleImageClick}
-              />
-            ))}
-          </ul>
-          {searchElements > 12 && (
-            <button
-              className="Button"
-              type="button"
-              id="more"
-              onClick={this.handleMoreButtonClick}
-            >
-              load more
-            </button>
-          )}
-        </>
-      );
-    }
+  if (status === 'showmodal') {
+    return <Modal largeImageURL={imageLargeURL} onModalClose={onModalClose} />;
+  }
 
-    if (status === 'showmodal') {
-      return (
-        <Modal largeImageURL={imageLargeURL} onModalClose={this.onModalClose} />
-      );
-    }
-
-    if (status === 'error') {
-      return <Notification type="Error" title="Error" text={errorMessage} />;
-    }
+  if (status === 'error') {
+    return <Notification type="Error" title="Error" text={errorMessage} />;
   }
 }
